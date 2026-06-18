@@ -2,63 +2,68 @@ name: Tests
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
+
+# Local execution:
+#   Install nektos/act (https://github.com/nektos/act) and Docker.
+#   Then run:
+#     act -j test    # run test job only
+#     act -j lint    # run lint job only
+#     act            # run all jobs
+# Uses catthehacker/ubuntu:act-22.04 runner image by default.
 
 jobs:
   test:
     name: Run tests
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-22.04
             neovim_version: nightly
+
           - os: ubuntu-22.04
             neovim_version: v0.10.0
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
 
       - name: Setup Neovim
         uses: rhysd/action-setup-vim@febef33995d6649302e9d88dda81e071b68f16a7 # v1.6.1
         with:
-          neovim: ${{ matrix.neovim_version }}
+          neovim: true
+          version: ${{ matrix.neovim_version }}
 
       - name: Install plenary.nvim
         run: |
-          git clone --depth 1 https://github.com/nvim-lua/plenary.nvim .plenary
+          mkdir -p ~/.local/share/nvim/site/pack/vendor/start
+          git clone --depth 1 https://github.com/nvim-lua/plenary.nvim \
+            ~/.local/share/nvim/site/pack/vendor/start/plenary.nvim
 
       - name: Run tests
         run: |
-          export NVIM_RTP="${PWD}/.plenary:${PWD}"
           nvim --version
-          nvim --headless -c "PlenaryBustedDirectory tests/ {}" -c "qa"
+          nvim --headless -c "PlenaryBustedDirectory tests/" -c "qa"
 
   lint:
     name: Lint code
     runs-on: ubuntu-22.04
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Setup Stylua
+        uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402 # v5
         with:
-          python-version: "3.11"
-
-      - name: Install pre-commit
-        run: pip install pre-commit
-
-      - name: Install stylua
-        run: sudo apt-get update && sudo apt-get install -y stylua
+          version: latest
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --check .
 
       - name: Install luacheck
-        run: sudo apt-get install -y luacheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq luarocks
+          sudo luarocks install luacheck
 
-      - name: Run pre-commit
-        run: pre-commit run --all-files
+      - name: Run luacheck
+        run: luacheck lua/

@@ -10,13 +10,9 @@ end
 ---@return boolean success
 ---@return string|nil error
 function M.add(filepath)
-	local ok, output = pcall(vim.fn.system, { "git", "add", "--", filepath })
-	if not ok then
-		return false, "git add failed: " .. output
-	end
-	local code = vim.v.shell_error
-	if code ~= 0 then
-		return false, output
+	local output = vim.fn.system({ "git", "add", "--", filepath })
+	if vim.v.shell_error ~= 0 then
+		return false, "git add failed: " .. vim.trim(output)
 	end
 	return true, nil
 end
@@ -26,13 +22,9 @@ end
 ---@return boolean success
 ---@return string|nil error
 function M.commit(filepath, message)
-	local ok, output = pcall(vim.fn.system, { "git", "commit", "-m", message, "--", filepath })
-	if not ok then
-		return false, "git commit failed: " .. output
-	end
-	local code = vim.v.shell_error
-	if code ~= 0 then
-		return false, output
+	local output = vim.fn.system({ "git", "commit", "-m", message, "--", filepath })
+	if vim.v.shell_error ~= 0 then
+		return false, "git commit failed: " .. vim.trim(output)
 	end
 	return true, nil
 end
@@ -47,13 +39,9 @@ function M.push(backup_dir, branch)
 	if vim.tbl_isempty(remotes) or not vim.tbl_contains(remotes, "origin") then
 		return nil, "no remote configured (add origin or set push.enable = false)"
 	end
-	local ok, output = pcall(vim.fn.system, { "git", "-C", backup_dir, "push", "origin", branch })
-	if not ok then
-		return false, "git push failed: " .. output
-	end
-	local code = vim.v.shell_error
-	if code ~= 0 then
-		return false, output
+	local output = vim.fn.system({ "git", "-C", backup_dir, "push", "origin", branch })
+	if vim.v.shell_error ~= 0 then
+		return false, "git push failed: " .. vim.trim(output)
 	end
 	return true, nil -- Signal success
 end

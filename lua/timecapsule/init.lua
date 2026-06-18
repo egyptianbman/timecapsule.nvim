@@ -5,8 +5,8 @@ local Log = require("timecapsule.log")
 
 ---@param filepath string
 ---@return boolean
-local function should_stage(filepath)
-	local patterns = M.config.file_patterns
+local function should_stage(filepath, patterns)
+	patterns = patterns or (M.config and M.config.file_patterns)
 
 	if not patterns or vim.tbl_isempty(patterns) then
 		for _, pattern in ipairs(Config.EXCLUDE_PATTERNS or {}) do
@@ -50,7 +50,7 @@ M.should_stage = should_stage
 
 ---@return string
 local function get_backup_dir()
-	return vim.fn.expand(M.config.backup)
+	return vim.fn.expand(M.config.backup):gsub("/+$", "")
 end
 
 ---@return boolean success
@@ -75,12 +75,12 @@ local function init_backup_repo()
 
 	-- Configure git for this repo if not already set
 	local email_result = vim.fn.systemlist("git -C " .. backup_dir .. " config user.email 2>&1")
-	if email_result[1]:gsub("%s+", "") == "" then
+	if not email_result[1] or email_result[1]:gsub("%s+", "") == "" then
 		vim.fn.system({ "git", "-C", backup_dir, "config", "user.email", "timecapsule@local" })
 	end
 
 	local name_result = vim.fn.systemlist("git -C " .. backup_dir .. " config user.name 2>&1")
-	if name_result[1]:gsub("%s+", "") == "" then
+	if not name_result[1] or name_result[1]:gsub("%s+", "") == "" then
 		vim.fn.system({ "git", "-C", backup_dir, "config", "user.name", "Timecapsule" })
 	end
 
@@ -101,10 +101,9 @@ local function copy_to_backup(filepath)
 	local dest_dir = backup_path:match("^(.+)/[^/]+$")
 	vim.fn.mkdir(dest_dir, "p")
 
-	-- Copy file
-	vim.fn.system({ "cp", "-p", abs_path, backup_path })
-	if vim.v.shell_error ~= 0 then
-		return false, "copy failed: " .. tostring(vim.v.shell_error)
+	local ok, err = vim.loop.fs_copyfile(abs_path, backup_path)
+	if not ok then
+		return false, "copy failed: " .. tostring(err)
 	end
 
 	return true, backup_path
@@ -113,6 +112,7 @@ end
 ---@param opts? table
 function M.setup(opts)
 	M.config = Config.validate(opts)
+	Log.setup(M.config.notify)
 	M.enabled = M.config.enable
 
 	if not M.enabled then
@@ -138,7 +138,9 @@ function M._handle_write()
 	end
 
 	local bufname = vim.api.nvim_buf_get_name(0)
-
+	if bufname == "" then
+		return
+	end
 	if not M.should_stage(bufname) then
 		return
 	end
@@ -176,7 +178,7 @@ function M._handle_write()
 
 	-- Stage file in backup repo (use relative path)
 	local rel_to_backup = backup_path:sub(#backup_dir + 2) -- Strip backup_dir prefix
-	vim.fn.system({ "git", "-C", backup_dir, "add", rel_to_backup })
+	vim.fn.system({ "git", "-C", backup_dir, "add", "--", rel_to_backup })
 	if vim.v.shell_error ~= 0 then
 		if M.config.notify.failure then
 			Log.failure("Timecapsule: add failed")
@@ -193,8 +195,7 @@ function M._handle_write()
 		return
 	end
 
-	local relpath = bufname -- Use absolute path in commit message
-	local message = M.config.message_format:gsub("{path}", relpath)
+	local message = M.config.message_format:gsub("{path}", bufname)
 
 	-- Commit in backup repo
 	success, _ = pcall(vim.fn.system, { "git", "-C", backup_dir, "commit", "-m", message })

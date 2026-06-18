@@ -58,6 +58,8 @@ M.default_config = {
 	notify = {
 		success = false,
 		failure = true,
+		success_level = vim.log.levels.INFO,
+		failure_level = vim.log.levels.ERROR,
 	},
 	command = {
 		name = "TimecapsuleToggle",
