@@ -197,7 +197,7 @@ function M._handle_write()
 	local message = M.config.message_format:gsub("{path}", relpath)
 
 	-- Commit in backup repo
-	success, err = pcall(vim.fn.system, { "git", "-C", backup_dir, "commit", "-m", message })
+	success, _ = pcall(vim.fn.system, { "git", "-C", backup_dir, "commit", "-m", message })
 	if not success then
 		if M.config.notify.failure then
 			Log.failure("Timecapsule: commit failed")
@@ -220,10 +220,10 @@ function M._handle_write()
 	-- Push if enabled
 	if M.config.push and M.config.push.enable then
 		local Git = require("timecapsule.git")
-		local success, err = Git.push(backup_dir, M.config.push.branch)
-		if not success then
+		local push_success, push_err = Git.push(backup_dir, M.config.push.branch)
+		if not push_success then
 			if M.config.notify.failure then
-				Log.failure("Timecapsule: " .. err)
+				Log.failure("Timecapsule: " .. push_err)
 			end
 		else
 			if M.config.notify.success then
