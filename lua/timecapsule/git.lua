@@ -2,7 +2,7 @@ local M = {}
 
 ---@return boolean
 function M.is_in_repo()
-	local result = vim.fn.systemlist("git rev-parse --is-inside-work-tree")
+	local result = vim.fn.systemlist({ "git", "rev-parse", "--is-inside-work-tree" })
 	return result[1] == "true"
 end
 
@@ -35,8 +35,8 @@ end
 ---@return string|nil error
 function M.push(backup_dir, branch)
 	-- Check if remote exists
-	local remotes = vim.fn.systemlist("git -C " .. backup_dir .. " remote")
-	if vim.tbl_isempty(remotes) or not vim.tbl_contains(remotes, "origin") then
+	local remotes = vim.fn.systemlist({ "git", "-C", backup_dir, "remote" })
+	if not remotes or next(remotes) == nil or not vim.tbl_contains(remotes, "origin") then
 		return nil, "no remote configured (add origin or set push.enable = false)"
 	end
 	local output = vim.fn.system({ "git", "-C", backup_dir, "push", "origin", branch })
@@ -48,8 +48,8 @@ end
 
 ---@return boolean
 function M.is_clean()
-	local result = vim.fn.systemlist("git status --porcelain")
-	return vim.tbl_isempty(result)
+	local result = vim.fn.systemlist({ "git", "status", "--porcelain" })
+	return next(result) == nil
 end
 
 return M

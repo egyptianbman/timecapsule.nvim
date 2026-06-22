@@ -16,6 +16,11 @@ describe("File pattern filtering", function()
 		assert.is_false(should_stage("package-lock.json", { "*.lua" }))
 	end)
 
+	it("should match nothing when file_patterns is empty", function()
+		assert.is_false(should_stage("src/script.lua", {}))
+		assert.is_false(should_stage("anything.txt", {}))
+	end)
+
 	it("should handle negation patterns", function()
 		assert.truthy(should_stage("src/main.lua", { "*.lua", "!src/test.lua" }))
 		assert.is_false(should_stage("src/test.lua", { "*.lua", "!src/test.lua" }))

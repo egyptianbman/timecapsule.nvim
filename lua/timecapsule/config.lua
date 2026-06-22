@@ -69,13 +69,7 @@ M.default_config = {
 ---@param opts? table
 ---@return TimecapsuleConfig
 function M.validate(opts)
-	local merged = {}
-	for k, v in pairs(M.default_config) do
-		merged[k] = v
-	end
-	for k, v in pairs(opts or {}) do
-		merged[k] = v
-	end
+	local merged = vim.tbl_deep_extend("force", M.default_config, opts or {})
 
 	if not merged.enable then
 		return merged
@@ -83,6 +77,14 @@ function M.validate(opts)
 
 	if type(merged.message_format) ~= "string" then
 		error("message_format must be a string")
+	end
+
+	if merged.file_patterns ~= nil and type(merged.file_patterns) ~= "table" then
+		error("file_patterns must be a table or nil")
+	end
+
+	if merged.notify and type(merged.notify) ~= "table" then
+		error("notify must be a table")
 	end
 
 	if not merged.backup or type(merged.backup) ~= "string" then
@@ -97,10 +99,6 @@ function M.validate(opts)
 			if type(merged.push.branch) ~= "string" then
 				error("push.branch must be a string")
 			end
-		else
-			-- Get current git branch from backup repo
-			local branch_result = vim.fn.systemlist("git -C " .. merged.backup .. " rev-parse --abbrev-ref HEAD 2>&1")
-			merged.push.branch = branch_result[1]:gsub("%s+", "")
 		end
 	end
 
