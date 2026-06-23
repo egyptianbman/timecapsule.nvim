@@ -19,8 +19,19 @@ Evaluate GitHub extensions before updating. Coordinate security analysis, change
 Always pin to commit SHA, never tags or branches. Tags move; SHAs don't. Add a version comment after the SHA for readability:
 
 ```yaml
-uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 ```
+
+## Verify SHA
+
+Before pinning, confirm the SHA actually exists:
+
+```bash
+curl -sI https://github.com/<owner>/<repo>/commit/<SHA> | head -1
+# 200 OK = valid; 404 = invalid — do NOT pin
+```
+
+Never trust a SHA from a third party or old commit history without verifying. Always fetch the real SHA from the GitHub API or the repo's commit page.
 
 ## Before you start
 

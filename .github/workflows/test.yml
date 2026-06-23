@@ -13,6 +13,10 @@ on:
 #     act            # run all jobs
 # Uses catthehacker/ubuntu:act-22.04 runner image by default.
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Run tests
@@ -27,13 +31,14 @@ jobs:
           - os: ubuntu-22.04
             neovim_version: v0.10.0
     steps:
-      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Setup Neovim
         uses: rhysd/action-setup-vim@febef33995d6649302e9d88dda81e071b68f16a7 # v1.6.1
         with:
           neovim: true
           version: ${{ matrix.neovim_version }}
+
 
       - name: Install plenary.nvim
         run: |
@@ -50,14 +55,12 @@ jobs:
     name: Lint code
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Setup Stylua
-        uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402 # v5
-        with:
-          version: latest
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --check .
+        run: |
+          curl -fsSL https://github.com/JohnnyMorganz/StyLua/releases/download/v2.0.2/stylua-linux-x86_64.zip -o /tmp/stylua.zip
+          unzip -o /tmp/stylua.zip -d /usr/local/bin/
 
       - name: Install luacheck
         run: |
